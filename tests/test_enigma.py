@@ -597,6 +597,10 @@ class TestEnigma(TestCase):
         self.assertEqual(bytes([reflect(i) for i in range(256)]), reflect_tb)
         self.assertEqual(bytes([replace(i) for i in range(256)]), replace_tb)
 
+    def tearDown(self) -> None:
+        with open("dumpekey.bin", "wb") as f:
+            f.write(bytes(data))
+
 
 if __name__ == "__main__":
     import unittest

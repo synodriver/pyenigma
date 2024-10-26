@@ -89,7 +89,7 @@ def main():
     version: str = get_version()
     dis = get_dis()
     setup(
-        name="pyenigma",
+        name="libenigma",
         version=version,
         url="https://github.com/synodriver/pyenigma",
         packages=packages,

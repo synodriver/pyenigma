@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+import sys
 from collections import defaultdict
 
 from Cython.Build import cythonize
+from Cython.Compiler.Version import version as cython_version
+from packaging.version import Version
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
@@ -25,17 +28,29 @@ class build_ext_compiler_check(build_ext):
         super().build_extensions()
 
 
+define_macros = [
+    ("ENIGMA_MALLOC0", "PyMem_RawMalloc"),
+    ("ENIGMA_FREE", "PyMem_RawFree"),
+    ("ENIGMA_EXTRA_HEADER", '"Python.h"'),
+]
+
+if (
+    sys.version_info > (3, 13, 0)
+    and hasattr(sys, "_is_gil_enabled")
+    and not sys._is_gil_enabled()
+):
+    print("build nogil")
+    define_macros.append(
+        ("Py_GIL_DISABLED", "1"),
+    )  # ("CYTHON_METH_FASTCALL", "1"), ("CYTHON_VECTORCALL",  1)]
+
 extensions = [
     Extension(
         "pyenigma._enigma",
         ["pyenigma/_enigma.pyx", "./dep/src/enigma.c"],
         include_dirs=[f"./dep/src"],
         library_dirs=[f"./dep/src"],
-        define_macros=[
-            ("ENIGMA_MALLOC0", "PyMem_RawMalloc"),
-            ("ENIGMA_FREE", "PyMem_RawFree"),
-            ("ENIGMA_EXTRA_HEADER", '"Python.h"'),
-        ],
+        define_macros=define_macros,
     ),
 ]
 
@@ -56,6 +71,18 @@ def get_version() -> str:
 
 
 packages = find_packages(exclude=("test", "tests.*", "test*"))
+
+
+compiler_directives = {
+    "cdivision": True,
+    "embedsignature": True,
+    "boundscheck": False,
+    "wraparound": False,
+}
+
+
+if Version(cython_version) >= Version("3.1.0a0"):
+    compiler_directives["freethreading_compatible"] = True
 
 
 def main():
@@ -87,6 +114,7 @@ def main():
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
             "Programming Language :: Python :: Implementation :: CPython",
         ],
         include_package_data=True,
@@ -94,12 +122,7 @@ def main():
         cmdclass={"build_ext": build_ext_compiler_check},
         ext_modules=cythonize(
             extensions,
-            compiler_directives={
-                "cdivision": True,
-                "embedsignature": True,
-                "boundscheck": False,
-                "wraparound": False,
-            },
+            compiler_directives=compiler_directives,
         ),
     )
 
